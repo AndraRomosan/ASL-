@@ -1,55 +1,178 @@
-<div>Teachable Machine Image Model</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ASL Letter Classifier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+
+<style>
+    body {
+        font-family: 'Poppins', sans-serif;
+        background: linear-gradient(135deg, #ffecd2, #fcb69f);
+        margin: 0;
+        padding: 0;
+        text-align: center;
+        color: #333;
+    }
+
+    header {
+        padding: 30px;
+    }
+
+    h1 {
+        font-size: 2.8rem;
+        color: #ff5f6d;
+        margin-bottom: 10px;
+    }
+
+    h2 {
+        font-size: 1.8rem;
+        margin-top: 40px;
+        color: #ff5f6d;
+    }
+
+    button {
+        padding: 12px 25px;
+        background-color: #ff5f6d;
+        border: none;
+        border-radius: 10px;
+        color: white;
+        font-size: 1.2rem;
+        cursor: pointer;
+        transition: 0.3s;
+        margin-top: 15px;
+    }
+
+    button:hover {
+        background-color: #ff3b50;
+    }
+
+    #webcam-container {
+        margin-top: 20px;
+    }
+
+    #big-letter {
+        font-size: 5rem;
+        font-weight: 700;
+        color: #ff3b50;
+        margin-top: 20px;
+        text-shadow: 2px 2px white;
+    }
+
+    .card {
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        width: 80%;
+        margin: 20px auto;
+        max-width: 800px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .instructions li {
+        text-align: left;
+        margin: 6px 0;
+        font-size: 1.1rem;
+    }
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>ASL Alphabet Recognizer</h1>
+    <p>A playful, hands-on machine learning demo</p>
+</header>
+
+<div class="card">
+    <h2>What This Project Does</h2>
+    <p>
+        This project uses a Teachable Machine image model to recognize hand shapes from the 
+        American Sign Language (ASL) alphabet. It analyzes the webcam image and predicts 
+        which of the 26 letters the user is signing.
+    </p>
+    <p>
+        Teachers can use this tool to introduce students to both **sign language** and 
+        **machine learning**, demonstrating how computers interpret visual patterns. 
+        It’s useful for lessons on accessibility, communication, and real-world AI applications.
+    </p>
+</div>
+
+<div class="card">
+    <h2>How to Use</h2>
+    <ul class="instructions">
+        <li>Click the <b>Start</b> button below to turn on your webcam.</li>
+        <li>Make a hand sign for any ASL letter (A–Z).</li>
+        <li>Hold your hand steady in the webcam frame.</li>
+        <li>The system will display the predicted letter below!</li>
+    </ul>
+</div>
+
 <button type="button" onclick="init()">Start</button>
+
 <div id="webcam-container"></div>
-<div id="label-container"></div>
+
+<h2>Predicted Letter:</h2>
+<div id="big-letter">—</div>
+
+<div id="label-container" style="display:none;"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
-<script type="text/javascript">
-    // More API functions here:
-    // https://github.com/googlecreativelab/teachablemachine-community/tree/master/libraries/image
 
-    // the link to your model provided by Teachable Machine export panel
-    const URL = "./my_model/";
+<script type="text/javascript">
+    const URL = "./my_model/";  // your model folder
 
     let model, webcam, labelContainer, maxPredictions;
 
-    // Load the image model and setup the webcam
     async function init() {
         const modelURL = URL + "model.json";
         const metadataURL = URL + "metadata.json";
 
-        // load the model and metadata
-        // Refer to tmImage.loadFromFiles() in the API to support files from a file picker
-        // or files from your local hard drive
-        // Note: the pose library adds "tmImage" object to your window (window.tmImage)
         model = await tmImage.load(modelURL, metadataURL);
         maxPredictions = model.getTotalClasses();
 
-        // Convenience function to setup a webcam
-        const flip = true; // whether to flip the webcam
-        webcam = new tmImage.Webcam(200, 200, flip); // width, height, flip
-        await webcam.setup(); // request access to the webcam
+        const flip = true;
+        webcam = new tmImage.Webcam(250, 250, flip);
+        await webcam.setup();
         await webcam.play();
         window.requestAnimationFrame(loop);
 
-        // append elements to the DOM
         document.getElementById("webcam-container").appendChild(webcam.canvas);
+
         labelContainer = document.getElementById("label-container");
-        for (let i = 0; i < maxPredictions; i++) { // and class labels
+        for (let i = 0; i < maxPredictions; i++) {
             labelContainer.appendChild(document.createElement("div"));
         }
     }
 
     async function loop() {
-        webcam.update(); // update the webcam frame
+        webcam.update();
         await predict();
         window.requestAnimationFrame(loop);
     }
 
-    // run the webcam image through the image model
     async function predict() {
-        // predict can take in an image, video or canvas html element
         const prediction = await model.predict(webcam.canvas);
+
+        // Find the top predicted class
+        let bestClass = "";
+        let bestProb = 0;
+
+        for (let i = 0; i < prediction.length; i++) {
+            const prob = prediction[i].probability;
+            if (prob > bestProb) {
+                bestProb = prob;
+                bestClass = prediction[i].className;
+            }
+        }
+
+        // Display big letter
+        const bigLetter = document.getElementById("big-letter");
+        bigLetter.innerHTML = bestProb > 0.5 ? bestClass : "—";
+
+        // (optional hidden list of all probabilities)
         for (let i = 0; i < maxPredictions; i++) {
             const classPrediction =
                 prediction[i].className + ": " + prediction[i].probability.toFixed(2);
@@ -57,3 +180,6 @@
         }
     }
 </script>
+
+</body>
+</html>
